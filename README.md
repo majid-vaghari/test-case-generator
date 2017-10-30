@@ -3,15 +3,20 @@
 This project is a simple library
 to help generating test cases easier.
 
+## Download
+Go to releases page and download the latest release.
+
 ## How to Generate Test Cases
 
 ### Step 1
 Create an ordinary Java class *with* default constructor:
 ```java
+import edu.sharif.cs.contests.*;
+
 public class Sum { // default directory name would be name of class
     public Sum() {} // don't override default constructor
     
-    @edu.sharif.cs.contests.Init
+    @Init
     public void initialization() { // no parameters
         // do some initialization stuff if necessary 
     }
@@ -21,31 +26,31 @@ public class Sum { // default directory name would be name of class
     * @param pw write your values into this PrintWriter.
     *           It would automatically be written on files.
     */
-    @edu.sharif.cs.contests.SampleInputs
+    @SampleInput
     public void sample1(java.io.PrintWriter pw) {
         pw.println("2 2"); // use your custom sample input
     }
     
-    @edu.sharif.cs.contests.SampleInputs
+    @SampleInput
     public void sample2(java.io.PrintWriter pw) { // you can have as many sample inputs as you want
         pw.println("5 6");
     }
     
-    @edu.sharif.cs.contests.InputTest
+    @InputTest
     public void generateInputs(java.io.PrintWriter pw, java.util.Random rnd) {
         // this function will be called each time to create a input file.
         // use provided random object to create random numbers.
         pw.println(rnd.nextInt() + " " + rnd.nextInt());
     }
     
-    @edu.sharif.cs.contests.OutputTest
+    @OutputTest
     public void solve(java.util.Scanner reader, java.io.PrintWriter writer) {
         // solve the problem in this function.
         // read the file from reader and write the solution into writer.
         writer.println(reader.nextInt() + reader.nextInt());
     }
     
-    @edu.sharif.cs.contests.Destroy
+    @Destroy
     public void tearDown() {
         // this function will be invoked after all tests are finished.
         // or the invoking threads don't respond for at least 5 minutes. :/

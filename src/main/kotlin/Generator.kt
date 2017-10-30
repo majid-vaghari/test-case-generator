@@ -25,7 +25,7 @@ annotation class Init
  */
 @Target(AnnotationTarget.FUNCTION)
 @Retention(AnnotationRetention.RUNTIME)
-annotation class SampleInputs
+annotation class SampleInput
 
 /**
  * Specifies input generator function.
@@ -64,7 +64,7 @@ private fun findMethod(cls: Class<*>, annotation: Class<out Annotation>): Method
  */
 private fun allSamples(cls: Class<*>): List<Method> =
         cls.methods
-                .filter { it.getAnnotation(SampleInputs::class.java) != null }
+                .filter { it.getAnnotation(SampleInput::class.java) != null }
 
 /**
  * Invokes the function which is annotated as Init.
