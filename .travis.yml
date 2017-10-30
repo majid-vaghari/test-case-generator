@@ -4,7 +4,7 @@ script:
         gradle jar
 
 before_deploy:
-      - export RELEASE_JAR_FILES=$(find $TRAVIS_BUILD_DIR/build/libs/ -n "*.jar")
+      - export RELEASE_JAR_FILES=$(find $TRAVIS_BUILD_DIR/build/libs/ -name "*.jar")
       - echo "Deploying $RELEASE_JAR_FILES to GitHub releases..."
 
 deploy:
