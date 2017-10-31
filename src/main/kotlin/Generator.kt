@@ -82,6 +82,8 @@ fun <T : Any> T.init(): T {
 fun <T : Any> T.input(writer: PrintWriter, randomGenerator: Random): T {
     val method = findMethod(this::class.java, InputTest::class.java)
     method.invoke(this, writer, randomGenerator)
+    writer.flush()
+    writer.close()
     return this
 }
 
@@ -92,6 +94,9 @@ fun <T : Any> T.input(writer: PrintWriter, randomGenerator: Random): T {
 fun <T : Any> T.output(reader: Scanner, writer: PrintWriter): T {
     val method = findMethod(this::class.java, OutputTest::class.java)
     method.invoke(this, reader, writer)
+    reader.close()
+    writer.flush()
+    writer.close()
     return this
 }
 
@@ -118,7 +123,7 @@ private val _ranGenerator = Random()
  */
 @JvmOverloads
 fun generate(cls: Class<*>, path: String = "test-cases/${cls.simpleName.toLowerCase()}/", num: Int = 100) {
-    val instance = cls.getConstructor(null).newInstance(null)
+    val instance = cls.getConstructor().newInstance()
     try {
         instance.init()
     } catch (e: NoSuchElementException) {
@@ -132,39 +137,33 @@ fun generate(cls: Class<*>, path: String = "test-cases/${cls.simpleName.toLowerC
     inputDir.mkdirs()
     outputDir.mkdirs()
 
-    val es = Executors.newCachedThreadPool()
-
     val inCount = AtomicInteger(1)
     allSamples(instance::class.java)
             .forEach {
-                es.execute {
-                    it.invoke(instance,
-                              PrintWriter(File(inputDir, "input${inCount.getAndIncrement()}.txt")))
+                if (inCount.get() <= num) {
+                    val writer = PrintWriter(File(inputDir, "input${inCount.getAndIncrement()}.txt"))
+                    it.invoke(instance, writer)
+                    writer.flush()
+                    writer.close()
                 }
             }
     while (inCount.get() <= num)
-        es.execute {
-            try {
-                instance.input(
-                        PrintWriter(File(inputDir, "input${inCount.getAndIncrement()}.txt")),
-                        _ranGenerator
-                              )
-            } catch (e: NoSuchElementException) {
-            }
+        try {
+            instance.input(
+                    PrintWriter(File(inputDir, "input${inCount.getAndIncrement()}.txt")),
+                    _ranGenerator
+            )
+        } catch (e: NoSuchElementException) {
         }
 
-    for (i in 1..num)
-        es.execute {
-            try {
-                instance.output(
-                        Scanner(File(inputDir, "input$i.txt")),
-                        PrintWriter(File(outputDir, "output$i.txt"))
-                               )
-            } catch (e: NoSuchElementException) {
-            }
+    for (outCount in 1..num)
+        try {
+            instance.output(
+                    Scanner(File(inputDir, "input$outCount.txt")),
+                    PrintWriter(File(outputDir, "output$outCount.txt"))
+            )
+        } catch (e: NoSuchElementException) {
         }
-
-    es.awaitTermination(5, TimeUnit.MINUTES)
 
     try {
         instance.destroy()
@@ -185,13 +184,13 @@ private fun printHelp() {
  */
 fun main(args: Array<String>) {
     when (args.size) {
-        1    -> try {
+        1 -> try {
             generate(Class.forName(args[0]))
         } catch (e: Exception) {
             printHelp()
             println("Error occurred: ${e.message}")
         }
-        2    -> try {
+        2 -> try {
             try {
                 generate(Class.forName(args[0]), num = Integer.parseInt(args[1]))
             } catch (e: NumberFormatException) {
@@ -201,7 +200,7 @@ fun main(args: Array<String>) {
             printHelp()
             println("Error occurred: ${e.message}")
         }
-        3    -> try {
+        3 -> try {
             generate(Class.forName(args[0]), args[1], Integer.parseInt(args[2]))
         } catch (e: Exception) {
             printHelp()
