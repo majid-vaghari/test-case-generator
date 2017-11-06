@@ -3,11 +3,10 @@
 package edu.sharif.cs.contests
 
 import java.io.File
+import java.io.PrintStream
 import java.io.PrintWriter
 import java.lang.reflect.Method
 import java.util.*
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 
@@ -122,21 +121,31 @@ private val _ranGenerator = Random()
  * At last destroy method is called and all is finished.
  */
 @JvmOverloads
-fun generate(cls: Class<*>, path: String = "test-cases/${cls.simpleName.toLowerCase()}/", num: Int = 100) {
-    val instance = cls.getConstructor().newInstance()
+fun generate(testClass: Class<*>, num: Int = 40, path: String = "test-cases/${testClass.simpleName.toLowerCase()}/", log: PrintStream = System.out) {
+    log.println("Starting test case generation...")
+    log.println("Instantiating test class...")
+    val instance = testClass.getConstructor().newInstance()
     try {
         instance.init()
     } catch (e: NoSuchElementException) {
     }
+    log.println("Test class initiated.")
 
     val baseDir = File(path)
-    baseDir.deleteRecursively()
+    if (baseDir.exists()) {
+        log.println("Deleting old files from: '${baseDir.absolutePath}'...")
+        baseDir.deleteRecursively()
+        log.println("Deleted.")
+    }
 
     val inputDir = File(path, "in")
     val outputDir = File(path, "out")
     inputDir.mkdirs()
     outputDir.mkdirs()
+    log.println("Input test case directory: '${inputDir.absolutePath}'")
+    log.println("Output test case directory: '${outputDir.absolutePath}'")
 
+    log.println("Starting to generate sample inputs...")
     val inCount = AtomicInteger(1)
     allSamples(instance::class.java)
             .forEach {
@@ -145,26 +154,49 @@ fun generate(cls: Class<*>, path: String = "test-cases/${cls.simpleName.toLowerC
                     it.invoke(instance, writer)
                     writer.flush()
                     writer.close()
+                    log.println("Sample test #${inCount.get() - 1} written to file.")
                 }
             }
+    log.println("Samples finished.")
+    log.println("Starting to generate extra inputs...")
+    var maxInTime = 0L
     while (inCount.get() <= num)
         try {
+            val startTime = System.currentTimeMillis()
             instance.input(
                     PrintWriter(File(inputDir, "input${inCount.getAndIncrement()}.txt")),
                     _ranGenerator
             )
+            val timeElapsed = System.currentTimeMillis() - startTime
+            if (timeElapsed > maxInTime) maxInTime = timeElapsed
+            log.println("Input test #${inCount.get() - 1} generated and written to file. Time elapsed: $timeElapsed ms.")
         } catch (e: NoSuchElementException) {
         }
+    log.println("Maximum time for input generation: $maxInTime ms.")
 
+    log.println("-------------------------------------------------")
+    log.println()
+
+    log.println("Starting to generate outputs...")
+    var maxOutTime = 0L
     for (outCount in 1..num)
         try {
+            val startTime = System.currentTimeMillis()
             instance.output(
                     Scanner(File(inputDir, "input$outCount.txt")),
                     PrintWriter(File(outputDir, "output$outCount.txt"))
             )
+            val timeElapsed = System.currentTimeMillis() - startTime
+            if (timeElapsed > maxOutTime) maxOutTime = timeElapsed
+            log.println("Output test #$outCount generated and written to file. Time elapsed: $timeElapsed ms.")
         } catch (e: NoSuchElementException) {
         }
+    log.println("Maximum time for output generation: $maxOutTime ms.")
 
+    log.println("-------------------------------------------------")
+    log.println()
+
+    log.println("All finished. Exiting...")
     try {
         instance.destroy()
     } catch (e: NoSuchElementException) {
@@ -201,7 +233,7 @@ fun main(args: Array<String>) {
             println("Error occurred: ${e.message}")
         }
         3 -> try {
-            generate(Class.forName(args[0]), args[1], Integer.parseInt(args[2]))
+            generate(Class.forName(args[0]), num = Integer.parseInt(args[2]), path = args[1])
         } catch (e: Exception) {
             printHelp()
             println("Error occurred: ${e.message}")
